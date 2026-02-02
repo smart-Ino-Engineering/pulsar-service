@@ -31,10 +31,10 @@ get_host_ip() {
         ip=$(ipconfig | grep -E "IPv4.*: ([0-9]{1,3}\.){3}[0-9]{1,3}" | head -n1 | grep -oE "([0-9]{1,3}\.){3}[0-9]{1,3}")
     fi
     
-    # Fallback to localhost if no IP found
+    # Fallback to shared.safaripro.net if no IP found
     if [[ -z "$ip" ]]; then
-        ip="localhost"
-        echo "Warning: Could not detect IP address, using localhost"
+        ip="shared.safaripro.net"
+        echo "Warning: Could not detect IP address, using shared.safaripro.net"
     fi
     
     echo "$ip"
@@ -167,22 +167,48 @@ fi
 echo "   - Use Public IP: $USE_PUBLIC_IP"
 
 # Create or update .env file with proper permissions
-echo "PULSAR_BROKER_IP=$SELECTED_IP" > .env
-echo "PULSAR_CLUSTER_NAME=cluster-a" >> .env
-echo "USE_PUBLIC_IP=$USE_PUBLIC_IP" >> .env
-echo "PULSAR_MANAGER_PASSWORD=admin123" >> .env
+echo "PULSAR_BROKER_IP=$BROKER_IP" > .env
+echo "PULSAR_CLUSTER_NAME=$CLUSTER_NAME" >> .env
+echo "USE_PUBLIC_IP=$USE_PUBLIC_IP_CONFIG" >> .env
+echo "PULSAR_MANAGER_PASSWORD=$MANAGER_PASSWORD" >> .env
 echo "# Pulsar Configuration" >> .env
 echo "# PULSAR_BROKER_IP: IP address that clients will use to connect" >> .env
+echo "# Default fallback: shared.safaripro.net" >> .env
 echo "# USE_PUBLIC_IP: Set to 'true' for external access, 'false' for local" >> .env
 echo "# Public IP requires firewall configuration for ports 6650, 8080, 9527" >> .env
 
 # Set proper permissions for .env file
 chmod 644 .env 2>/dev/null || true
 
-echo "✓ Updated .env file with PULSAR_BROKER_IP=$SELECTED_IP"
+echo "✓ Updated .env file with PULSAR_BROKER_IP=$BROKER_IP"
 
 echo ""
-echo "3. Checking Docker and Docker Compose..."
+echo "3. Loading configuration from .env file or setting defaults..."
+
+# Load existing .env file if it exists
+if [ -f ".env" ]; then
+    echo "✓ Loading existing .env file"
+    set -a  # automatically export all variables
+    source .env
+    set +a  # stop automatically exporting
+else
+    echo "✓ No .env file found, will create with detected values"
+fi
+
+# Use existing values from .env or detected values, with shared.safaripro.net as ultimate fallback
+BROKER_IP="${PULSAR_BROKER_IP:-${SELECTED_IP:-shared.safaripro.net}}"
+CLUSTER_NAME="${PULSAR_CLUSTER_NAME:-cluster-a}"
+USE_PUBLIC_IP_CONFIG="${USE_PUBLIC_IP:-$USE_PUBLIC_IP}"
+MANAGER_PASSWORD="${PULSAR_MANAGER_PASSWORD:-admin123}"
+
+echo "Configuration Summary:"
+echo "   - Broker IP: $BROKER_IP"
+echo "   - Cluster Name: $CLUSTER_NAME"
+echo "   - Use Public IP: $USE_PUBLIC_IP_CONFIG"
+echo "   - Manager Password: $MANAGER_PASSWORD"
+
+echo ""
+echo "4. Checking Docker and Docker Compose..."
 
 # Check if Docker is running
 if ! docker info >/dev/null 2>&1; then
@@ -212,22 +238,22 @@ source .env
 set +a  # stop automatically exporting
 
 echo ""
-echo "4. Cleaning up any existing containers..."
+echo "5. Cleaning up any existing containers..."
 $DOCKER_COMPOSE_CMD down --remove-orphans --volumes 2>/dev/null || true
 
 echo ""
-echo "5. Pulling latest images..."
+echo "6. Pulling latest images..."
 $DOCKER_COMPOSE_CMD pull
 
 echo ""
-echo "6. Starting Apache Pulsar services..."
+echo "7. Starting Apache Pulsar services..."
 echo "This may take a few minutes for the first startup..."
 
 # Start services with proper logging
 $DOCKER_COMPOSE_CMD up -d
 
 echo ""
-echo "7. Waiting for services to be healthy..."
+echo "8. Waiting for services to be healthy..."
 
 # Function to check service health
 check_service_health() {
@@ -269,17 +295,17 @@ fi
 sleep 10
 
 echo ""
-echo "8. Service Status:"
+echo "9. Service Status:"
 echo "===================="
 $DOCKER_COMPOSE_CMD ps
 
 echo ""
-echo "9. Service URLs:"
+echo "10. Service URLs:"
 echo "===================="
-echo "Pulsar Broker:          http://$SELECTED_IP:8080"
-echo "Pulsar Admin REST API:  http://$SELECTED_IP:8080/admin/v2"
-echo "Pulsar Manager:         http://$SELECTED_IP:9527"
-echo "Pulsar Service URL:     pulsar://$SELECTED_IP:6650"
+echo "Pulsar Broker:          http://$BROKER_IP:8080"
+echo "Pulsar Admin REST API:  http://$BROKER_IP:8080/admin/v2"
+echo "Pulsar Manager:         http://$BROKER_IP:9527"
+echo "Pulsar Service URL:     pulsar://$BROKER_IP:6650"
 echo ""
 echo "Default Pulsar Manager credentials:"
 echo "Username: admin"
@@ -290,9 +316,11 @@ echo "🎉 Apache Pulsar services started successfully!"
 echo ""
 echo "Configuration Details:"
 echo "======================"
-echo "Selected IP: $SELECTED_IP"
-echo "IP Type: $([ "$USE_PUBLIC_IP" = "true" ] && echo "Public" || echo "Private")"
+echo "Broker IP: $BROKER_IP"
+echo "Cluster Name: $CLUSTER_NAME"
+echo "IP Type: $([ "$USE_PUBLIC_IP_CONFIG" = "true" ] && echo "Public" || echo "Private")"
 echo "Data Directory Permissions: 777 (full access)"
+echo "Fallback IP: shared.safaripro.net"
 echo ""
 echo "Management Commands:"
 echo "==================="
@@ -302,5 +330,7 @@ echo "Check status:      $DOCKER_COMPOSE_CMD ps"
 echo "Restart services:  bash run-service.sh"
 echo ""
 echo "To manually configure IP, edit .env file and set:"
-echo "PULSAR_BROKER_IP=<your-desired-ip>"
+echo "PULSAR_BROKER_IP=<your-desired-ip>  # Default: shared.safaripro.net"
+echo "PULSAR_CLUSTER_NAME=<cluster-name>  # Default: cluster-a"
 echo "USE_PUBLIC_IP=true|false"
+echo "PULSAR_MANAGER_PASSWORD=<password>  # Default: admin123"

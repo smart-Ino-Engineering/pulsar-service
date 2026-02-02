@@ -108,8 +108,8 @@ services:
       - managedLedgerDefaultEnsembleSize=1
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
-      - advertisedAddress=${PULSAR_BROKER_IP}
-      - advertisedListeners=external:pulsar://${PULSAR_BROKER_IP}:6650
+      - advertisedAddress=${PULSAR_BROKER_IP:-shared.safaripro.net}
+      - advertisedListeners=external:pulsar://${PULSAR_BROKER_IP:-shared.safaripro.net}:6650
       - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
     depends_on:
       zookeeper:
@@ -136,6 +136,7 @@ services:
       SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
       PULSAR_MANAGER_USER: "admin"
       PULSAR_MANAGER_PASSWORD: "${PULSAR_MANAGER_PASSWORD:-admin123}"
+      PULSAR_BROKER_IP: "${PULSAR_BROKER_IP:-shared.safaripro.net}"
     ports:
       - "9527:9527"
     depends_on:
