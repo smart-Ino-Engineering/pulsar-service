@@ -108,10 +108,10 @@ services:
       - managedLedgerDefaultEnsembleSize=1
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
-      - advertisedAddress=broker
-      - brokerServiceUrl=pulsar://broker:6650
-      - webServiceUrl=http://broker:8080
-      - advertisedListeners=internal:pulsar://broker:6650
+      # Tell the outside world to use your public IP
+      - advertisedAddress=54.92.223.31
+      # Define both internal and external routes cleanly
+      - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://54.92.223.31:6650
       - internalListenerName=internal
       - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
     depends_on:
