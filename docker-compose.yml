@@ -108,11 +108,11 @@ services:
       - managedLedgerDefaultEnsembleSize=1
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
-      # Tell the outside world to use your public IP
+      # Force the broker to announce your public AWS IP
       - advertisedAddress=54.92.223.31
-      # Define both internal and external routes cleanly
-      - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://54.92.223.31:6650
-      - internalListenerName=internal
+      - brokerServiceUrl=pulsar://54.92.223.31:6650
+      - webServiceUrl=http://54.92.223.31:8080
+      # YOU MUST DELETE 'advertisedListeners' AND 'internalListenerName' entirely!
       - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
     depends_on:
       zookeeper:
