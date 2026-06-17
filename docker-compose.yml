@@ -109,9 +109,9 @@ services:
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
       # Force the broker to announce your public AWS IP
-      - advertisedAddress=164.68.97.50
-      - brokerServiceUrl=pulsar://164.68.97.50:6650
-      - webServiceUrl=http://164.68.97.50:8080
+      - advertisedAddress=3.70.156.71
+      - brokerServiceUrl=pulsar://3.70.156.71:6650
+      - webServiceUrl=http://3.70.156.71:8080
       # YOU MUST DELETE 'advertisedListeners' AND 'internalListenerName' entirely!
       - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
     depends_on:
