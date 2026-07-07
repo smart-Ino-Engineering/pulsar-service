@@ -93,7 +93,6 @@ services:
       zookeeper:
         condition: service_healthy
 
-  # Start broker
 # Start broker
   broker:
     image: apachepulsar/pulsar:latest
@@ -110,9 +109,9 @@ services:
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
       
-      # FIX: Dual routing. Docker components use 'broker', external clients use '109.205.180.118'
+      # FIX: Separate the ports! Internal gets 6650, External gets 6651
       - advertisedAddress=broker
-      - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://109.205.180.118:6650
+      - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://109.205.180.118:6651
       - internalListenerName=internal
       
       - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
@@ -123,6 +122,7 @@ services:
         condition: service_started
     ports:
       - "6650:6650"
+      - "6651:6651" # <-- Make sure to expose the new port!
       - "8085:8080"
     command: bash -c "bin/apply-config-from-env.py conf/broker.conf && exec bin/pulsar broker"
     logging:
