@@ -5,7 +5,7 @@ import threading
 def run_consumer():
     try:
         print("[Consumer] Initializing raw Pulsar Client...")
-        client = pulsar.Client('pulsar://127.0.0.1:6650')
+        client = pulsar.Client('pulsar://109.205.180.118:6650')
         
         print("[Consumer] Subscribing to topic...")
         consumer = client.subscribe('persistent://public/default/test-raw-topic', 'test-subscription')
