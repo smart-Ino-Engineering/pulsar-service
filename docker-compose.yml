@@ -102,9 +102,9 @@ services:
     networks:
       - pulsar
     
-    # THE DNS HACK: Force internal loopback for the public IP
+    # THE DNS HACK: Force internal loopback for the advertised public IP
     extra_hosts:
-      - "109.205.180.118:127.0.0.1"
+      - "${PULSAR_BROKER_IP:-127.0.0.1}:127.0.0.1"
       
     environment:
       - metadataStoreUrl=zk:zookeeper:2181
