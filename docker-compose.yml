@@ -93,7 +93,7 @@ services:
         max-size: "100m"
         max-file: "3"
 
-  # Start broker
+# Start broker
   broker:
     image: apachepulsar/pulsar:latest
     container_name: broker
@@ -108,11 +108,11 @@ services:
       - managedLedgerDefaultEnsembleSize=1
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
-      # Force the broker to announce your public AWS IP
-      - advertisedAddress=109.205.180.118
-      - brokerServiceUrl=pulsar://109.205.180.118:6650
-      - webServiceUrl=http://109.205.180.118:8080
-      # YOU MUST DELETE 'advertisedListeners' AND 'internalListenerName' entirely!
+      
+      # FIX: Define separate listeners for Docker-internal and external access
+      - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://109.205.180.118:6650
+      - internalListenerName=internal
+      
       - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
     depends_on:
       zookeeper:
