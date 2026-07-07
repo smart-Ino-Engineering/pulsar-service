@@ -95,8 +95,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-  # Start broker
+# Start broker
   broker:
     image: apachepulsar/pulsar:latest
     container_name: broker
@@ -115,10 +114,11 @@ services:
       - advertisedAddress=broker
       - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://109.205.180.118:6651
       - internalListenerName=internal
-      - brokerServicePort=
+      
+      # FIX: Define the internal service port alongside the explicit bindings
+      - brokerServicePort=6650
       - bindAddresses=internal:pulsar://0.0.0.0:6650,external:pulsar://0.0.0.0:6651
       
-      # ⬇️ MASSIVE MEMORY REDUCTION
       - PULSAR_MEM=-Xms384m -Xmx384m -XX:MaxDirectMemorySize=256m
     depends_on:
       zookeeper:
