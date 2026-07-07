@@ -37,27 +37,6 @@ services:
         max-size: "100m"
         max-file: "3"
 
-  # Init cluster metadata
-  pulsar-init:
-    container_name: pulsar-init
-    hostname: pulsar-init
-    image: apachepulsar/pulsar:latest
-    networks:
-      - pulsar
-    command:
-      - bash
-      - -c
-      - |
-        bin/pulsar initialize-cluster-metadata \
-        --cluster cluster-a \
-        --zookeeper zookeeper:2181 \
-        --configuration-store zookeeper:2181 \
-        --web-service-url http://broker:8080 \
-        --broker-service-url pulsar://broker:6650
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-
   # Start bookie
   bookie:
     image: apachepulsar/pulsar:latest
@@ -93,6 +72,28 @@ services:
         max-size: "100m"
         max-file: "3"
 
+# Init cluster metadata
+  pulsar-init:
+    container_name: pulsar-init
+    hostname: pulsar-init
+    image: apachepulsar/pulsar:latest
+    networks:
+      - pulsar
+    command:
+      - bash
+      - -c
+      - |
+        bin/pulsar initialize-cluster-metadata \
+        --cluster cluster-a \
+        --zookeeper zookeeper:2181 \
+        --configuration-store zookeeper:2181 \
+        --web-service-url http://broker:8080 \
+        --broker-service-url pulsar://broker:6650
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  # Start broker
 # Start broker
   broker:
     image: apachepulsar/pulsar:latest
@@ -109,7 +110,8 @@ services:
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
       
-      # FIX: Define separate listeners for Docker-internal and external access
+      # FIX: Dual routing. Docker components use 'broker', external clients use '109.205.180.118'
+      - advertisedAddress=broker
       - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://109.205.180.118:6650
       - internalListenerName=internal
       
@@ -128,7 +130,7 @@ services:
       options:
         max-size: "100m"
         max-file: "3"
-
+        
   # Start Pulsar Manager
   pulsar-manager:
     image: apachepulsar/pulsar-manager:v0.3.0
