@@ -14,12 +14,12 @@ services:
       - ./data/zookeeper:/pulsar/data/zookeeper
     environment:
       - metadataStoreUrl=zk:zookeeper:2181
-      - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m
+      # ⬇️ MASSIVE MEMORY REDUCTION
+      - PULSAR_MEM=-Xms128m -Xmx128m -XX:MaxDirectMemorySize=64m
     command:
       - bash
       - -c
       - |
-        # Ensure data directory exists and has proper permissions
         mkdir -p /pulsar/data/zookeeper/version-2
         chown -R pulsar:pulsar /pulsar/data/zookeeper || true
         chmod -R 755 /pulsar/data/zookeeper || true
@@ -34,51 +34,19 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "100m"
+        max-size: "10m"
         max-file: "3"
 
-  # Start bookie
-  bookie:
-    image: apachepulsar/pulsar:latest
-    container_name: bookie
-    restart: unless-stopped
-    networks:
-      - pulsar
-    environment:
-      - clusterName=${PULSAR_CLUSTER_NAME:-cluster-a}
-      - zkServers=zookeeper:2181
-      - metadataServiceUri=metadata-store:zk:zookeeper:2181
-      - advertisedAddress=bookie
-      - BOOKIE_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-      pulsar-init:
-        condition: service_completed_successfully
-    volumes:
-      - ./data/bookkeeper:/pulsar/data/bookkeeper
-    command:
-      - bash
-      - -c
-      - |
-        # Ensure data directory exists and has proper permissions
-        mkdir -p /pulsar/data/bookkeeper
-        chown -R pulsar:pulsar /pulsar/data/bookkeeper || true
-        chmod -R 755 /pulsar/data/bookkeeper || true
-        bin/apply-config-from-env.py conf/bookkeeper.conf && exec bin/pulsar bookie
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "3"
-
-# Init cluster metadata
+  # Init cluster metadata
   pulsar-init:
     container_name: pulsar-init
     hostname: pulsar-init
     image: apachepulsar/pulsar:latest
     networks:
       - pulsar
+    environment:
+      # ⬇️ Prevent the init script from spiking RAM
+      - PULSAR_MEM=-Xms128m -Xmx128m -XX:MaxDirectMemorySize=64m
     command:
       - bash
       - -c
@@ -92,8 +60,43 @@ services:
     depends_on:
       zookeeper:
         condition: service_healthy
-        
-# Start broker
+
+  # Start bookie
+  bookie:
+    image: apachepulsar/pulsar:latest
+    container_name: bookie
+    restart: unless-stopped
+    networks:
+      - pulsar
+    environment:
+      - clusterName=${PULSAR_CLUSTER_NAME:-cluster-a}
+      - zkServers=zookeeper:2181
+      - metadataServiceUri=metadata-store:zk:zookeeper:2181
+      - advertisedAddress=bookie
+      # ⬇️ MASSIVE MEMORY REDUCTION
+      - BOOKIE_MEM=-Xms256m -Xmx256m -XX:MaxDirectMemorySize=128m
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+      pulsar-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./data/bookkeeper:/pulsar/data/bookkeeper
+    command:
+      - bash
+      - -c
+      - |
+        mkdir -p /pulsar/data/bookkeeper
+        chown -R pulsar:pulsar /pulsar/data/bookkeeper || true
+        chmod -R 755 /pulsar/data/bookkeeper || true
+        bin/apply-config-from-env.py conf/bookkeeper.conf && exec bin/pulsar bookie
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Start broker
   broker:
     image: apachepulsar/pulsar:latest
     container_name: broker
@@ -109,16 +112,14 @@ services:
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
       
-      # 1. How clients should route to the broker
       - advertisedAddress=broker
       - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://109.205.180.118:6651
       - internalListenerName=internal
-      
-      # 2. FIX: Tell the broker to physically open both sockets!
-      - brokerServicePort=  # Clear the default port to avoid binding conflicts
+      - brokerServicePort=
       - bindAddresses=internal:pulsar://0.0.0.0:6650,external:pulsar://0.0.0.0:6651
       
-      - PULSAR_MEM=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
+      # ⬇️ MASSIVE MEMORY REDUCTION
+      - PULSAR_MEM=-Xms384m -Xmx384m -XX:MaxDirectMemorySize=256m
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -132,26 +133,5 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "100m"
-        max-file: "3"
-
-  # Start Pulsar Manager
-  pulsar-manager:
-    image: apachepulsar/pulsar-manager:v0.3.0
-    container_name: pulsar-manager
-    restart: unless-stopped
-    networks:
-      - pulsar
-    environment:
-      SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
-      PULSAR_MANAGER_USER: "admin"
-      PULSAR_MANAGER_PASSWORD: "${PULSAR_MANAGER_PASSWORD:-admin123}"
-    ports:
-      - "9527:9527"
-    depends_on:
-      - broker
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
+        max-size: "10m"
         max-file: "3"
