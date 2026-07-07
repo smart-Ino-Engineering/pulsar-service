@@ -14,7 +14,6 @@ services:
       - ./data/zookeeper:/pulsar/data/zookeeper
     environment:
       - metadataStoreUrl=zk:zookeeper:2181
-      # ⬇️ MASSIVE MEMORY REDUCTION
       - PULSAR_MEM=-Xms128m -Xmx128m -XX:MaxDirectMemorySize=64m
     command:
       - bash
@@ -45,7 +44,6 @@ services:
     networks:
       - pulsar
     environment:
-      # ⬇️ Prevent the init script from spiking RAM
       - PULSAR_MEM=-Xms128m -Xmx128m -XX:MaxDirectMemorySize=64m
     command:
       - bash
@@ -73,7 +71,6 @@ services:
       - zkServers=zookeeper:2181
       - metadataServiceUri=metadata-store:zk:zookeeper:2181
       - advertisedAddress=bookie
-      # ⬇️ MASSIVE MEMORY REDUCTION
       - BOOKIE_MEM=-Xms256m -Xmx256m -XX:MaxDirectMemorySize=128m
     depends_on:
       zookeeper:
@@ -95,7 +92,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-# Start broker
+
+  # Start broker
   broker:
     image: apachepulsar/pulsar:latest
     container_name: broker
@@ -103,6 +101,11 @@ services:
     restart: unless-stopped
     networks:
       - pulsar
+    
+    # THE DNS HACK: Force internal loopback for the public IP
+    extra_hosts:
+      - "109.205.180.118:127.0.0.1"
+      
     environment:
       - metadataStoreUrl=zk:zookeeper:2181
       - zookeeperServers=zookeeper:2181
@@ -111,15 +114,11 @@ services:
       - managedLedgerDefaultWriteQuorum=1
       - managedLedgerDefaultAckQuorum=1
       
-      - advertisedAddress=broker
-      - advertisedListeners=internal:pulsar://broker:6650,external:pulsar://109.205.180.118:6651
-      - internalListenerName=internal
+      # Clean, simple, single advertisement
+      - advertisedAddress=109.205.180.118
       
-      # FIX: Define the internal service port alongside the explicit bindings
-      - brokerServicePort=6650
-      - bindAddresses=internal:pulsar://0.0.0.0:6650,external:pulsar://0.0.0.0:6651
-      
-      - PULSAR_MEM=-Xms384m -Xmx384m -XX:MaxDirectMemorySize=256m
+      # Slightly bumped up memory for stability
+      - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -127,8 +126,7 @@ services:
         condition: service_started
     ports:
       - "6650:6650"
-      - "6651:6651"
-      - "8085:8080"
+      - "8080:8080"
     command: bash -c "bin/apply-config-from-env.py conf/broker.conf && exec bin/pulsar broker"
     logging:
       driver: "json-file"
