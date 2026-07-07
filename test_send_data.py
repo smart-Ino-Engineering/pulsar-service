@@ -25,9 +25,9 @@ class FlightBooking(BaseModel):
 
 # 2. Configure the HA Network Profile
 config = PulsarConfig(
-    host="127.0.0.1",
+    host="109.205.180.118",
     port=6650,
-    admin_port=8080,
+    admin_port=8085,
     cluster_name="cluster-a", # Ensures the Admin API authorizes this cluster
     subscription_name="fluent-worker-group"
 )

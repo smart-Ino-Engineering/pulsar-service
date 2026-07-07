@@ -2,10 +2,18 @@ import pulsar
 import time
 import threading
 
+# ==========================================
+# CONFIGURATION
+# Set this to your target environment:
+# - For local testing: 'pulsar://127.0.0.1:6651'
+# - For remote server testing: 'pulsar://109.205.180.118:6651'
+# ==========================================
+PULSAR_URL = 'pulsar://109.205.180.118:6650'
+
 def run_consumer():
     try:
-        print("[Consumer] Initializing raw Pulsar Client...")
-        client = pulsar.Client('pulsar://109.205.180.118:6650')
+        print(f"[Consumer] Initializing raw Pulsar Client to {PULSAR_URL}...")
+        client = pulsar.Client(PULSAR_URL)
         
         print("[Consumer] Subscribing to topic...")
         consumer = client.subscribe('persistent://public/default/test-raw-topic', 'test-subscription')
@@ -23,9 +31,9 @@ def run_consumer():
 def run_producer():
     try:
         # Wait a moment for consumer to be ready
-        time.sleep(1)
-        print("[Producer] Initializing raw Pulsar Client...")
-        client = pulsar.Client('pulsar://127.0.0.1:6650')
+        time.sleep(2)
+        print(f"[Producer] Initializing raw Pulsar Client to {PULSAR_URL}...")
+        client = pulsar.Client(PULSAR_URL)
         
         print("[Producer] Creating producer...")
         producer = client.create_producer('persistent://public/default/test-raw-topic')
@@ -40,7 +48,7 @@ def run_producer():
         print(f"[Producer] Error: {e}")
 
 if __name__ == "__main__":
-    print("=== Raw Pulsar Client Integration Test ===")
+    print(f"=== Raw Pulsar Client Integration Test ({PULSAR_URL}) ===")
     
     # Run consumer in background thread
     t = threading.Thread(target=run_consumer)
