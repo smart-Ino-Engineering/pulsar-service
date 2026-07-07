@@ -115,7 +115,7 @@ services:
       - managedLedgerDefaultAckQuorum=1
       
       # Clean, simple, single advertisement
-      - advertisedAddress=109.205.180.118
+      - advertisedAddress=${PULSAR_BROKER_IP:-127.0.0.1}
       
       # Slightly bumped up memory for stability
       - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m
