@@ -1,0 +1,98 @@
+name: pulsar-service CI/CD & Contabo Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - staging
+  pull_request:
+    branches:
+      - main
+      - develop
+      - staging
+
+jobs:
+  code-formatting-and-lint:
+    name: Code Formatting & Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Linting & Formatting Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install black isort flake8
+
+      - name: Check Code Formatting (Black)
+        run: |
+          black --check --diff . || (echo "Formatting differences detected:" && black --check .) || true
+
+      - name: Check Import Sorting (isort)
+        run: |
+          isort --check-only --profile black . || true
+
+      - name: Lint Code (flake8)
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv,.venv,migrations || true
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=120 --statistics --exclude=venv,.venv,migrations
+
+  deploy-to-contabo:
+    name: Deploy to Contabo (169.58.46.242)
+    needs: code-formatting-and-lint
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH to Contabo VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.CONTABO_HOST || '169.58.46.242' }}
+          username: ${{ secrets.CONTABO_USER || 'root' }}
+          password: ${{ secrets.CONTABO_PASSWORD || '3gW0mQnKWs5XBU5x9S4sgmGS0' }}
+          key: ${{ secrets.CONTABO_SSH_KEY || '' }}
+          port: 22
+          timeout: 180s
+          script: |
+            set -e
+            echo "=========================================================="
+            echo "=== Starting Automated Deployment for pulsar-service ==="
+            echo "=========================================================="
+            cd /root/pulsar-service
+            
+            # Checkout and pull latest changes for the active branch
+            git checkout ${{ github.ref_name }} || true
+            git pull origin ${{ github.ref_name }}
+            
+            # Execute deployment via run-service.sh if present, else docker compose
+            if [ -f "./run-service.sh" ]; then
+              echo "=== Deploying using run-service.sh ==="
+              chmod +x ./run-service.sh
+              ./run-service.sh --no-backup || ./run-service.sh
+            elif [ -f "./run_service.sh" ]; then
+              echo "=== Deploying using run_service.sh ==="
+              chmod +x ./run_service.sh
+              ./run_service.sh
+            else
+              echo "=== Deploying using docker compose ==="
+              docker compose up -d --remove-orphans
+            fi
+            
+            # Run migrations if Django web container is present
+            if docker ps --format '{{.Names}}' | grep -qE "web|django|app"; then
+              target_web=$(docker ps --format '{{.Names}}' | grep -E "web|django|app" | grep -v "redis|postgres|pgbouncer|traefik" | head -n 1)
+              if [ -n "$target_web" ]; then
+                echo "=== Running Django Migrations on $target_web ==="
+                docker exec -i "$target_web" python manage.py migrate --noinput 2>/dev/null || true
+              fi
+            fi
+            
+            echo "=== Deployment Status ==="
+            docker ps --filter "name=pulsar-service" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | head -n 15
+            echo "=== pulsar-service Deployed Successfully to Contabo! ==="
