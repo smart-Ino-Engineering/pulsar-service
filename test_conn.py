@@ -34,14 +34,14 @@ if __name__ == "__main__":
     test_tcp_connection("127.0.0.1", 6379, "Redis Fallback")
     
     # Check advertised IP
-    print("\n--- Checking Advertised IP (109.205.180.118) ---")
-    test_tcp_connection("109.205.180.118", 6650, "Pulsar Broker")
-    test_tcp_connection("109.205.180.118", 8080, "Pulsar Admin")
+    print("\n--- Checking Advertised IP (127.0.0.1) ---")
+    test_tcp_connection("127.0.0.1", 6650, "Pulsar Broker")
+    test_tcp_connection("127.0.0.1", 8080, "Pulsar Admin")
     
     # Try actual client connection via localhost
     test_pulsar_client("127.0.0.1")
     
     # Try actual client connection via advertised IP
-    test_pulsar_client("109.205.180.118")
+    test_pulsar_client("127.0.0.1")
     
     print("\nDiagnostics Completed.")

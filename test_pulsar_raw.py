@@ -6,9 +6,9 @@ import threading
 # CONFIGURATION
 # Set this to your target environment:
 # - For local testing: 'pulsar://127.0.0.1:6651'
-# - For remote server testing: 'pulsar://109.205.180.118:6651'
+# - For remote server testing: 'pulsar://127.0.0.1:6651'
 # ==========================================
-PULSAR_URL = 'pulsar://109.205.180.118:6650'
+PULSAR_URL = 'pulsar://127.0.0.1:6650'
 
 def run_consumer():
     try:
